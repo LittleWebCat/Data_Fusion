@@ -1,0 +1,6 @@
+python3 camera_viewer.py \
+  --width 320 --height 240 --fps 10 --fourcc MJPG --buffer-size 1 \
+  --record-dir data --duration 30 --warmup-seconds 1.5 --no-preview \
+  --lidar-bind 169.254.1.100 \
+  --lidar-udp-port 47131 --lidar-udp-port 46075 \
+  --lidar-writer-queue 2048
