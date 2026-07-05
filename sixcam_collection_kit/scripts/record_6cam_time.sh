@@ -13,6 +13,7 @@ sleep 1
 RUN=$(now_dataset_dir)
 mkdir -p "$RUN"/logs
 for name in "${CAM_NAMES[@]}"; do mkdir -p "$RUN/$name"; done
+trap 'stop_lidar_recorder "$RUN"' EXIT
 
 echo "$RUN" > "$DATA_ROOT/latest_camera_dataset.txt"
 echo "Saving to: $RUN"
@@ -44,10 +45,19 @@ CAM_FRONT_RIGHT=$CAM_FRONT_RIGHT
 CAM_BACK=$CAM_BACK
 CAM_BACK_LEFT=$CAM_BACK_LEFT
 CAM_BACK_RIGHT=$CAM_BACK_RIGHT
+enable_lidar=$ENABLE_LIDAR
+lidar_bind_ip=$LIDAR_BIND_IP
+lidar_sensor_host=$LIDAR_SENSOR_HOST
+lidar_udp_ports=$LIDAR_UDP_PORTS
+lidar_metadata_only=$LIDAR_METADATA_ONLY
+lidar_rcvbuf=$LIDAR_RCVBUF
+lidar_writer_queue=$LIDAR_WRITER_QUEUE
 time_base=python time.monotonic_ns and time.time_ns
 recording_method=ffmpeg frame-count -frames:v, -c copy
 note=Frame timestamps are estimated from all_ffmpeg_started plus (warmup_frames+sample_index)/fps. Not hardware timestamps.
 META
+
+start_lidar_recorder "$RUN"
 
 start_cam () {
   local name="$1"
@@ -65,16 +75,21 @@ start_cam () {
     -c copy \
     "$RUN/$name/video.mkv" \
     > "$RUN/$name/ffmpeg.log" 2>&1 &
+  CAM_PIDS+=("$!")
 }
 
 log_time_event "$RUN" "record_start" "before_starting_ffmpeg"
+CAM_PIDS=()
 for i in "${!CAM_NAMES[@]}"; do
   start_cam "${CAM_NAMES[$i]}" "${CAM_DEVS[$i]}"
 done
 log_time_event "$RUN" "all_ffmpeg_started" "all_6_camera_processes_spawned"
 
-wait
+for pid in "${CAM_PIDS[@]}"; do
+  wait "$pid"
+done
 log_time_event "$RUN" "record_end" "all_ffmpeg_finished"
+stop_lidar_recorder "$RUN"
 
 echo "Finished."
 echo "Dataset saved to: $RUN"
