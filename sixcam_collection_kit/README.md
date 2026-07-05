@@ -104,6 +104,26 @@ LIDAR_METADATA_ONLY=0
 Set `ENABLE_LIDAR=0` for camera-only recording. Set `LIDAR_METADATA_ONLY=1` for
 lowest disk load timing capture without raw point-cloud packets.
 
+Optional PC-attached GPS/IMU serial settings are also in `config/config.env`.
+After plugging in the USB serial devices, prefer stable paths from
+`/dev/serial/by-id/`:
+
+```bash
+ls -l /dev/serial/by-id/ /dev/ttyUSB* /dev/ttyACM*
+```
+
+Then enable and map the devices:
+
+```bash
+ENABLE_GPS=1
+GPS_SERIAL_DEV=/dev/serial/by-id/usb-your-gps
+GPS_BAUD=115200
+
+ENABLE_IMU=1
+IMU_SERIAL_DEV=/dev/serial/by-id/usb-your-imu
+IMU_BAUD=115200
+```
+
 ## 4. Preview all cameras
 
 ```bash
@@ -148,6 +168,26 @@ ouster_metadata.json
 
 The CSV files contain `monotonic_ns` and `system_time_ns` timestamps for fusion.
 The `.bin` files contain raw UDP payloads for point-cloud decoding.
+
+When `ENABLE_GPS=1` or `ENABLE_IMU=1`, timestamped serial files are saved under:
+
+```text
+$LATEST/serial/
+```
+
+Typical outputs:
+
+```text
+gps_serial.csv
+gps_serial.bin
+gps_serial_manifest.json
+imu_serial.csv
+imu_serial.bin
+imu_serial_manifest.json
+```
+
+The CSV files contain `monotonic_ns`, `system_time_ns`, byte offsets, sizes, and
+a short text preview. The `.bin` files contain the raw serial bytes.
 
 The latest dataset path is saved to:
 
