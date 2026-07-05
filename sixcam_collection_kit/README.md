@@ -28,6 +28,21 @@ sudo apt install ffmpeg v4l-utils python3 python3-pip
 python3 -m pip install --user -r requirements.txt
 ```
 
+For reproducing this kit on another PC, follow:
+
+```bash
+docs/NEW_PC_SETUP.md
+```
+
+Useful supplemental files:
+
+```text
+config/config.example.env
+docs/NEW_PC_SETUP.md
+docs/LIDAR_OUSTER_OS1.md
+scripts/collect_system_snapshot.sh
+```
+
 ## 2. Detect cameras on a new PC
 
 ```bash
@@ -74,6 +89,21 @@ FORMAT=MJPG
 WARMUP_FRAMES=5
 ```
 
+Optional LiDAR settings are in the same file. The current Ouster OS-1-128 setup
+uses the wired interface IP `169.254.1.100`, sensor host `169.254.213.23`, lidar
+UDP port `7502`, and IMU UDP port `7503`:
+
+```bash
+ENABLE_LIDAR=1
+LIDAR_BIND_IP=169.254.1.100
+LIDAR_SENSOR_HOST=169.254.213.23
+LIDAR_UDP_PORTS="7502 7503"
+LIDAR_METADATA_ONLY=0
+```
+
+Set `ENABLE_LIDAR=0` for camera-only recording. Set `LIDAR_METADATA_ONLY=1` for
+lowest disk load timing capture without raw point-cloud packets.
+
 ## 4. Preview all cameras
 
 ```bash
@@ -97,6 +127,27 @@ Timestamp-aware recording, recommended for fusion:
 ```bash
 ./scripts/record_6cam_time.sh 30
 ```
+
+When `ENABLE_LIDAR=1`, the same command also records LiDAR UDP packets for the
+full camera capture. LiDAR files are saved under:
+
+```text
+$LATEST/lidar/
+```
+
+Typical outputs:
+
+```text
+lidar_7502_udp.csv
+lidar_7502_udp.bin
+lidar_7503_udp.csv
+lidar_7503_udp.bin
+lidar_manifest.json
+ouster_metadata.json
+```
+
+The CSV files contain `monotonic_ns` and `system_time_ns` timestamps for fusion.
+The `.bin` files contain raw UDP payloads for point-cloud decoding.
 
 The latest dataset path is saved to:
 
@@ -186,13 +237,14 @@ python3 scripts/extract_6cam_sample.py "$LATEST" 100
 
 ## Notes for sensor fusion
 
-This kit creates a camera-side dataset. For LiDAR/IMU/GPS fusion, log every other sensor using the same system clock convention:
+This kit records cameras and optional LiDAR using the same system clock convention:
 
 ```text
 monotonic_ns, system_time_ns, sensor fields...
 ```
 
-Then align each LiDAR/IMU/GPS measurement to camera samples using nearest `estimated_monotonic_ns`.
+Align each LiDAR/IMU/GPS measurement to camera samples using nearest
+`estimated_monotonic_ns`.
 
 The current camera timestamps are estimated from:
 
