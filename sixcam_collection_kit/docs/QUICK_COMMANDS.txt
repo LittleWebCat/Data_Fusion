@@ -5,11 +5,22 @@ cd sixcam_collection_kit
 # Install
 ./install_deps_ubuntu.sh
 
+# New PC replication guide
+less docs/NEW_PC_SETUP.md
+
+# Save hardware/network/camera mapping snapshot
+./scripts/collect_system_snapshot.sh
+
 # Detect cameras
 ./scripts/check_cameras.sh
 
 # Edit mapping
 nano config/config.env
+
+# LiDAR is enabled by default for the current Ouster setup:
+# LIDAR_BIND_IP=169.254.1.100
+# LIDAR_UDP_PORTS="7502 7503"
+# Set ENABLE_LIDAR=0 in config/config.env for camera-only recording.
 
 # Preview
 python3 scripts/preview_6cam.py
@@ -20,6 +31,9 @@ python3 scripts/preview_6cam.py
 # Verify
 LATEST=$(cat ~/Downloads/latest_camera_dataset.txt)
 ./scripts/verify_dataset.sh "$LATEST"
+
+# LiDAR files, when enabled
+ls "$LATEST/lidar"
 
 # Make manifests
 python3 scripts/make_6cam_manifest.py "$LATEST"
