@@ -1,0 +1,36 @@
+# Quick commands
+
+cd sixcam_collection_kit
+
+# Install
+./install_deps_ubuntu.sh
+
+# Detect cameras
+./scripts/check_cameras.sh
+
+# Edit mapping
+nano config/config.env
+
+# Preview
+python3 scripts/preview_6cam.py
+
+# Record timestamp-aware dataset for 30 seconds
+./scripts/record_6cam_time.sh 30
+
+# Verify
+LATEST=$(cat ~/Downloads/latest_camera_dataset.txt)
+./scripts/verify_dataset.sh "$LATEST"
+
+# Make manifests
+python3 scripts/make_6cam_manifest.py "$LATEST"
+python3 scripts/make_6cam_sync_manifest.py "$LATEST"
+python3 scripts/make_6cam_timestamp_manifest.py "$LATEST"
+
+# Sample check images
+python3 scripts/extract_6cam_sample.py "$LATEST" 0
+python3 scripts/extract_6cam_sample.py "$LATEST" 100
+xdg-open "$LATEST/sync_sample_000100.jpg"
+
+# 3x2 grid video
+./scripts/make_sixcam_grid.sh "$LATEST"
+xdg-open "$LATEST/sixcam_grid.mp4"
