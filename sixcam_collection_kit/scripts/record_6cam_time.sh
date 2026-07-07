@@ -13,7 +13,7 @@ sleep 1
 RUN=$(now_dataset_dir)
 mkdir -p "$RUN"/logs
 for name in "${CAM_NAMES[@]}"; do mkdir -p "$RUN/$name"; done
-trap 'stop_serial_recorders "$RUN"; stop_lidar_recorder "$RUN"' EXIT
+trap 'stop_lidar_recorder "$RUN"' EXIT
 
 echo "$RUN" > "$DATA_ROOT/latest_camera_dataset.txt"
 echo "Saving to: $RUN"
@@ -34,7 +34,9 @@ created_at=$(date --iso-8601=seconds)
 width=$WIDTH
 height=$HEIGHT
 fps=$FPS
+camera_capture_fps=$CAMERA_CAPTURE_FPS
 format=$FORMAT
+mjpeg_qscale=$MJPEG_QSCALE
 duration_s=$DURATION
 target_frames=$TARGET_FRAMES
 warmup_frames=$WARMUP_FRAMES
@@ -52,19 +54,12 @@ lidar_udp_ports=$LIDAR_UDP_PORTS
 lidar_metadata_only=$LIDAR_METADATA_ONLY
 lidar_rcvbuf=$LIDAR_RCVBUF
 lidar_writer_queue=$LIDAR_WRITER_QUEUE
-enable_gps=$ENABLE_GPS
-gps_serial_dev=$GPS_SERIAL_DEV
-gps_baud=$GPS_BAUD
-enable_imu=$ENABLE_IMU
-imu_serial_dev=$IMU_SERIAL_DEV
-imu_baud=$IMU_BAUD
 time_base=python time.monotonic_ns and time.time_ns
-recording_method=ffmpeg frame-count -frames:v, -c copy
-note=Frame timestamps are estimated from all_ffmpeg_started plus (warmup_frames+sample_index)/fps. Not hardware timestamps.
+recording_method=ffmpeg capture at camera_capture_fps, software fps filter to fps, MJPEG encode
+note=Frame timestamps use video frame PTS plus per-camera ffmpeg start events. Not hardware timestamps.
 META
 
 start_lidar_recorder "$RUN"
-start_serial_recorders "$RUN"
 
 start_cam () {
   local name="$1"
@@ -76,10 +71,12 @@ start_cam () {
     -f v4l2 \
     -input_format mjpeg \
     -video_size ${WIDTH}x${HEIGHT} \
-    -framerate "$FPS" \
+    -framerate "$CAMERA_CAPTURE_FPS" \
     -i "$dev" \
+    -vf "fps=$FPS" \
     -frames:v "$NFRAMES" \
-    -c copy \
+    -c:v mjpeg \
+    -q:v "$MJPEG_QSCALE" \
     "$RUN/$name/video.mkv" \
     > "$RUN/$name/ffmpeg.log" 2>&1 &
   CAM_PIDS+=("$!")
@@ -96,7 +93,6 @@ for pid in "${CAM_PIDS[@]}"; do
   wait "$pid"
 done
 log_time_event "$RUN" "record_end" "all_ffmpeg_finished"
-stop_serial_recorders "$RUN"
 stop_lidar_recorder "$RUN"
 
 echo "Finished."
