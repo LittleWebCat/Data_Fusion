@@ -30,22 +30,3 @@ PY
     echo "Missing lidar/lidar_manifest.json"
   fi
 fi
-
-if [[ -d "$RUN/serial" ]]; then
-  echo "===== Serial ====="
-  for manifest_path in "$RUN"/serial/*_serial_manifest.json; do
-    [[ -f "$manifest_path" ]] || continue
-    python3 - "$manifest_path" <<'PY'
-import json
-import sys
-from pathlib import Path
-
-manifest = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
-print(
-    f"{manifest.get('name')}: device={manifest.get('device')} "
-    f"baud={manifest.get('baud')} chunks={manifest.get('chunks')} "
-    f"bytes={manifest.get('bytes')}"
-)
-PY
-  done
-fi
