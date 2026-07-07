@@ -5,7 +5,7 @@ Portable Linux kit for collecting synchronized 6-camera USB video datasets.
 Tested workflow from the original PC:
 
 - 6 USB UVC cameras
-- 1600x1200 MJPG @ 15 FPS
+- 1600x1200 MJPG saved @ 10 FPS
 - frame-count recording
 - 5 warm-up frames
 - synchronized camera manifest
@@ -84,10 +84,16 @@ Default recording settings:
 ```bash
 WIDTH=1600
 HEIGHT=1200
-FPS=15
+FPS=10
+CAMERA_CAPTURE_FPS=15
 FORMAT=MJPG
+MJPEG_QSCALE=3
 WARMUP_FRAMES=5
 ```
+
+`FPS` is the saved dataset rate. `CAMERA_CAPTURE_FPS` is the hardware capture
+rate used when the USB cameras refuse 10 FPS at `1600x1200 MJPG`; ffmpeg drops
+frames to save synchronized 10 FPS video for LiDAR matching.
 
 Optional LiDAR settings are in the same file. The current Ouster OS-1-128 setup
 uses the wired interface IP `169.254.1.100`, sensor host `169.254.213.23`, lidar
@@ -104,30 +110,10 @@ LIDAR_METADATA_ONLY=0
 Set `ENABLE_LIDAR=0` for camera-only recording. Set `LIDAR_METADATA_ONLY=1` for
 lowest disk load timing capture without raw point-cloud packets.
 
-Optional PC-attached GPS/IMU serial settings are also in `config/config.env`.
-After plugging in the USB serial devices, prefer stable paths from
-`/dev/serial/by-id/`:
-
-```bash
-ls -l /dev/serial/by-id/ /dev/ttyUSB* /dev/ttyACM*
-```
-
-Then enable and map the devices:
-
-```bash
-ENABLE_GPS=1
-GPS_SERIAL_DEV=/dev/serial/by-id/usb-your-gps
-GPS_BAUD=115200
-
-ENABLE_IMU=1
-IMU_SERIAL_DEV=/dev/serial/by-id/usb-your-imu
-IMU_BAUD=115200
-```
-
 ## 4. Preview all cameras
 
 ```bash
-python3 scripts/preview_6cam.py
+python3 scripts/preview_6cam.py --fps 10
 ```
 
 Press `q` or `ESC` to quit.
@@ -169,25 +155,38 @@ ouster_metadata.json
 The CSV files contain `monotonic_ns` and `system_time_ns` timestamps for fusion.
 The `.bin` files contain raw UDP payloads for point-cloud decoding.
 
-When `ENABLE_GPS=1` or `ENABLE_IMU=1`, timestamped serial files are saved under:
+To generate a top-down LiDAR point image from the latest dataset:
 
-```text
-$LATEST/serial/
+```bash
+./scripts/generate_lidar_point_image.py
 ```
 
-Typical outputs:
+The image is saved as:
 
 ```text
-gps_serial.csv
-gps_serial.bin
-gps_serial_manifest.json
-imu_serial.csv
-imu_serial.bin
-imu_serial_manifest.json
+$LATEST/lidar_point_image.png
 ```
 
-The CSV files contain `monotonic_ns`, `system_time_ns`, byte offsets, sizes, and
-a short text preview. The `.bin` files contain the raw serial bytes.
+To generate LiDAR cloud images matched to each synchronized camera timestamp:
+
+```bash
+./scripts/generate_camera_matched_lidar_images.py
+```
+
+This writes unique nearest-neighbor LiDAR images to:
+
+```text
+$LATEST/lidar_matched_images/
+```
+
+and a per-camera-sample lookup table to:
+
+```text
+$LATEST/camera_lidar_image_manifest.csv
+```
+
+Use `camera_lidar_delta_ms` in the manifest to reject rows where the nearest
+LiDAR scan is too far from the estimated camera timestamp.
 
 The latest dataset path is saved to:
 
@@ -202,13 +201,26 @@ LATEST=$(cat ~/Downloads/latest_camera_dataset.txt)
 ./scripts/verify_dataset.sh "$LATEST"
 ```
 
-For 30 seconds at 15 FPS with 5 warm-up frames, expected frame count is about:
+For a fuller manual check of the latest dataset, including LiDAR packet counts,
+raw-drop status, and file presence:
 
-```text
-30 * 15 + 5 = 455 frames
+```bash
+./scripts/check_latest_collection.sh
 ```
 
-Small differences like 454/455 are acceptable if only startup MJPEG warnings appear.
+Or check a specific dataset:
+
+```bash
+./scripts/check_latest_collection.sh /path/to/dataset_YYYYMMDD_HHMMSS
+```
+
+For 30 seconds at 10 FPS with 5 warm-up frames, expected frame count is about:
+
+```text
+30 * 10 + 5 = 305 frames
+```
+
+Small differences like 304/305 are acceptable if only startup MJPEG warnings appear.
 
 ## 7. Generate manifests
 
