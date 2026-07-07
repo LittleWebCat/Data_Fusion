@@ -23,14 +23,8 @@ LIDAR_UDP_PORTS=${LIDAR_UDP_PORTS:-}
 LIDAR_RCVBUF=${LIDAR_RCVBUF:-16777216}
 LIDAR_WRITER_QUEUE=${LIDAR_WRITER_QUEUE:-8192}
 LIDAR_METADATA_ONLY=${LIDAR_METADATA_ONLY:-0}
-
-ENABLE_GPS=${ENABLE_GPS:-0}
-GPS_SERIAL_DEV=${GPS_SERIAL_DEV:-}
-GPS_BAUD=${GPS_BAUD:-115200}
-ENABLE_IMU=${ENABLE_IMU:-0}
-IMU_SERIAL_DEV=${IMU_SERIAL_DEV:-}
-IMU_BAUD=${IMU_BAUD:-115200}
-SERIAL_PIDS=()
+CAMERA_CAPTURE_FPS=${CAMERA_CAPTURE_FPS:-$FPS}
+MJPEG_QSCALE=${MJPEG_QSCALE:-3}
 
 now_dataset_dir() {
   mkdir -p "$DATA_ROOT"
@@ -39,8 +33,8 @@ now_dataset_dir() {
 
 configure_camera() {
   local dev="$1"
-  echo "Configuring $dev -> ${WIDTH}x${HEIGHT} $FORMAT @ ${FPS} FPS"
-  v4l2-ctl -d "$dev" --set-fmt-video=width=$WIDTH,height=$HEIGHT,pixelformat=$FORMAT --set-parm=$FPS
+  echo "Configuring $dev -> ${WIDTH}x${HEIGHT} $FORMAT capture @ ${CAMERA_CAPTURE_FPS} FPS, output @ ${FPS} FPS"
+  v4l2-ctl -d "$dev" --set-fmt-video=width=$WIDTH,height=$HEIGHT,pixelformat=$FORMAT --set-parm=$CAMERA_CAPTURE_FPS
   v4l2-ctl -d "$dev" -c power_line_frequency=$POWER_LINE_FREQUENCY >/dev/null 2>&1 || true
 }
 
@@ -114,68 +108,4 @@ stop_lidar_recorder() {
   kill -TERM "$LIDAR_PID" 2>/dev/null || true
   wait "$LIDAR_PID" || true
   log_time_event "$run" "lidar_recorder_stopped" "pid=$LIDAR_PID"
-}
-
-start_serial_recorder() {
-  local run="$1"
-  local name="$2"
-  local device="$3"
-  local baud="$4"
-  local serial_dir="$run/serial"
-
-  if [[ -z "$device" ]]; then
-    echo "Serial recorder $name is enabled but device path is empty" >&2
-    exit 1
-  fi
-  if [[ ! -e "$device" ]]; then
-    echo "Serial recorder $name device does not exist: $device" >&2
-    exit 1
-  fi
-
-  mkdir -p "$serial_dir"
-  echo "Starting serial recorder $name on $device at $baud baud"
-  python3 "$SCRIPT_DIR/record_serial.py" \
-    --output-dir "$serial_dir" \
-    --name "$name" \
-    --device "$device" \
-    --baud "$baud" \
-    > "$serial_dir/${name}_serial_recorder.log" 2>&1 &
-  local pid=$!
-  SERIAL_PIDS+=("$pid")
-  echo "$pid" > "$serial_dir/${name}_serial_recorder.pid"
-  log_time_event "$run" "serial_recorder_started" "name=$name pid=$pid device=$device baud=$baud"
-}
-
-start_serial_recorders() {
-  local run="$1"
-  SERIAL_PIDS=()
-
-  if [[ "$ENABLE_GPS" == "1" ]]; then
-    start_serial_recorder "$run" "gps" "$GPS_SERIAL_DEV" "$GPS_BAUD"
-  fi
-  if [[ "$ENABLE_IMU" == "1" ]]; then
-    start_serial_recorder "$run" "imu" "$IMU_SERIAL_DEV" "$IMU_BAUD"
-  fi
-}
-
-stop_serial_recorders() {
-  local run="$1"
-  local pid
-
-  if [[ "${#SERIAL_PIDS[@]}" -eq 0 ]]; then
-    return 0
-  fi
-
-  for pid in "${SERIAL_PIDS[@]}"; do
-    if kill -0 "$pid" 2>/dev/null; then
-      log_time_event "$run" "serial_recorder_stop_requested" "pid=$pid"
-      kill -TERM "$pid" 2>/dev/null || true
-    fi
-  done
-
-  for pid in "${SERIAL_PIDS[@]}"; do
-    wait "$pid" || true
-    log_time_event "$run" "serial_recorder_stopped" "pid=$pid"
-  done
-  SERIAL_PIDS=()
 }
