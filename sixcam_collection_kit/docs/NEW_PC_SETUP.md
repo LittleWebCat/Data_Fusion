@@ -107,31 +107,7 @@ LIDAR_SENSOR_HOST=169.254.213.23
 LIDAR_UDP_PORTS="7502 7503"
 ```
 
-## 5. Configure PC-attached GPS/IMU serial devices
-
-If the GPS or IMU is connected directly to the PC over USB serial, inspect the
-device paths:
-
-```bash
-ls -l /dev/serial/by-id/ /dev/ttyUSB* /dev/ttyACM*
-```
-
-Prefer `/dev/serial/by-id/...` paths because `/dev/ttyUSB0` and
-`/dev/ttyACM0` can change after unplug/reboot. Update `config/config.env`:
-
-```bash
-ENABLE_GPS=1
-GPS_SERIAL_DEV=/dev/serial/by-id/usb-your-gps
-GPS_BAUD=115200
-
-ENABLE_IMU=1
-IMU_SERIAL_DEV=/dev/serial/by-id/usb-your-imu
-IMU_BAUD=115200
-```
-
-Set either `ENABLE_GPS=0` or `ENABLE_IMU=0` if that device is not connected.
-
-## 6. Record a test dataset
+## 5. Record a test dataset
 
 ```bash
 bash scripts/record_6cam_time.sh 10
@@ -144,9 +120,8 @@ Expected:
 - all six cameras have the same frame count
 - LiDAR `7502` and `7503` packet counts are nonzero
 - `raw_dropped=0` for both LiDAR streams
-- enabled GPS/IMU serial streams have nonzero `chunks` and `bytes`
 
-## 7. Normal collection
+## 6. Normal collection
 
 ```bash
 bash scripts/record_6cam_time.sh 30
@@ -170,17 +145,11 @@ dataset_YYYYMMDD_HHMMSS/
   lidar/lidar_7503_udp.bin
   lidar/lidar_manifest.json
   lidar/ouster_metadata.json
-  serial/gps_serial.csv
-  serial/gps_serial.bin
-  serial/gps_serial_manifest.json
-  serial/imu_serial.csv
-  serial/imu_serial.bin
-  serial/imu_serial_manifest.json
   clock_events.csv
   meta.txt
 ```
 
-## 8. Generate camera manifests
+## 7. Generate camera manifests
 
 ```bash
 python3 scripts/make_6cam_manifest.py "$LATEST"
