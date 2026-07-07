@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import argparse
 import os
 import sys
 import time
@@ -23,16 +24,27 @@ def load_config(path: Path):
     return cfg
 
 cfg = load_config(CONFIG_PATH)
-WIDTH_PREVIEW = int(os.environ.get("PREVIEW_WIDTH", "640"))
-HEIGHT_PREVIEW = int(os.environ.get("PREVIEW_HEIGHT", "480"))
-FPS_PREVIEW = int(os.environ.get("PREVIEW_FPS", "30"))
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(description="Preview all six cameras in a 3x2 grid.")
+    parser.add_argument("--width", type=int, default=int(os.environ.get("PREVIEW_WIDTH", "640")))
+    parser.add_argument("--height", type=int, default=int(os.environ.get("PREVIEW_HEIGHT", "480")))
+    parser.add_argument("--fps", type=int, default=int(os.environ.get("PREVIEW_FPS", cfg.get("FPS", "15"))))
+    return parser.parse_args()
+
+
+args = parse_args()
+WIDTH_PREVIEW = args.width
+HEIGHT_PREVIEW = args.height
+FPS_PREVIEW = args.fps
 
 cams = [
-    ("CAM_FRONT", cfg.get("CAM_FRONT", "/dev/video0")),
     ("CAM_FRONT_LEFT", cfg.get("CAM_FRONT_LEFT", "/dev/video2")),
+    ("CAM_FRONT", cfg.get("CAM_FRONT", "/dev/video0")),
     ("CAM_FRONT_RIGHT", cfg.get("CAM_FRONT_RIGHT", "/dev/video4")),
-    ("CAM_BACK", cfg.get("CAM_BACK", "/dev/video6")),
     ("CAM_BACK_LEFT", cfg.get("CAM_BACK_LEFT", "/dev/video8")),
+    ("CAM_BACK", cfg.get("CAM_BACK", "/dev/video6")),
     ("CAM_BACK_RIGHT", cfg.get("CAM_BACK_RIGHT", "/dev/video10")),
 ]
 
