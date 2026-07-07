@@ -4,12 +4,12 @@ RUN=${1:-$(cat "$HOME/Downloads/latest_camera_dataset.txt")}
 OUT=${2:-$RUN/sixcam_grid.mp4}
 
 ffmpeg -y -hide_banner \
-  -fflags +genpts -i "$RUN/CAM_FRONT/video.mkv" \
   -fflags +genpts -i "$RUN/CAM_FRONT_LEFT/video.mkv" \
+  -fflags +genpts -i "$RUN/CAM_FRONT/video.mkv" \
   -fflags +genpts -i "$RUN/CAM_FRONT_RIGHT/video.mkv" \
+  -fflags +genpts -i "$RUN/CAM_BACK_RIGHT/video.mkv" \
   -fflags +genpts -i "$RUN/CAM_BACK/video.mkv" \
   -fflags +genpts -i "$RUN/CAM_BACK_LEFT/video.mkv" \
-  -fflags +genpts -i "$RUN/CAM_BACK_RIGHT/video.mkv" \
   -filter_complex "\
 [0:v]trim=start_frame=5,setpts=PTS-STARTPTS,scale=640:480,drawtext=text='CAM_FRONT':x=15:y=20:fontsize=28:fontcolor=white:box=1:boxcolor=black@0.6[v0];\
 [1:v]trim=start_frame=5,setpts=PTS-STARTPTS,scale=640:480,drawtext=text='CAM_FRONT_LEFT':x=15:y=20:fontsize=28:fontcolor=white:box=1:boxcolor=black@0.6[v1];\
