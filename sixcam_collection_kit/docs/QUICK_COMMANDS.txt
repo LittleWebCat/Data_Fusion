@@ -23,7 +23,7 @@ nano config/config.env
 # Set ENABLE_LIDAR=0 in config/config.env for camera-only recording.
 
 # Preview
-python3 scripts/preview_6cam.py
+python3 scripts/preview_6cam.py --fps 10
 
 # Record timestamp-aware dataset for 30 seconds
 ./scripts/record_6cam_time.sh 30
